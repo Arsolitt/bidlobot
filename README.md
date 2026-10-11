@@ -118,6 +118,31 @@ Dockerfile         multi-stage, debian runtime, yt-dlp + ffmpeg + omp
 docker-compose.yml single bot service, named volume, internal healthcheck
 ```
 
+## Image provenance
+
+Published images live at `ghcr.io/arsolitt/bidlobot` and are built by
+`.github/workflows/publish.yml` on every push to `master`. The workflow
+checks out the **fork tree itself** (plain `actions/checkout` of the
+pushed commit), not a pristine upstream revision, so fork-side patches
+are always part of the image.
+
+Tags encode both ends of the provenance:
+
+```
+master-<UPSTREAM_SHA:0:7>-f<GITHUB_SHA:0:7>
+```
+
+e.g. `master-ed97cc32-f1a2b3c4` - `ed97cc32` is the upstream commit
+the fork tree is based on (the `UPSTREAM_SHA` env pin in the workflow),
+`f1a2b3c4` is the fork commit that was built. Both are passed to the
+build as `VERSION` (full tag) and `COMMIT` (fork sha) ldflags, so
+`/version` reports them.
+
+**Rebasing onto upstream**: update the tree, then bump `UPSTREAM_SHA`
+in `publish.yml` in the same commit so the next tag advertises the new
+base. The workflow does not check out `UPSTREAM_SHA`; it is purely the
+provenance anchor.
+
 ## License
 
 Internal.
