@@ -145,13 +145,19 @@ provenance anchor.
 
 Production deploys from the orphan `gitops` branch of this repo, which
 holds only `deploy/` (Deployment, PVC, ExternalSecret, kustomization).
-After `publish.yml` builds and pushes the image, its `update-manifest`
-job rewrites `newTag` in `deploy/kustomization.yaml` on that branch;
-Flux reconciles the commit (GitRepository `bidlobot` + owner
-Kustomization in the homelab gitops repo) and rolls the pod. Secrets
-are references only: an ExternalSecret maps Bitwarden Secrets Manager
-entries to the `bidlobot-secrets` Secret via the `bitwarden`
-ClusterSecretStore - no values in this repo.
+`publish.yml` is a linear chain - test -> image -> smoke + sign ->
+update-manifest - so a red test never builds an image (ci.yml is an
+independent workflow and cannot veto the deploy on its own), the
+image is booted and cosign-signed (keyless OIDC) before anything
+points the cluster at it, and the `update-manifest` job rewrites
+`newTag` AND `digest` in `deploy/kustomization.yaml` on that branch.
+Flux reconciles the digest-pinned image (GitRepository `bidlobot` +
+owner Kustomization in the homelab gitops repo) and rolls the pod;
+because the deploy is pinned by digest, overwriting a tag in GHCR
+can no longer reach the cluster. Secrets are references only: an
+ExternalSecret maps Bitwarden Secrets Manager entries to the
+`bidlobot-secrets` Secret via the `bitwarden` ClusterSecretStore - no
+values in this repo.
 
 ## License
 

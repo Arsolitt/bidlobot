@@ -52,6 +52,7 @@ devlog (immutable history). Run `./validate.sh` after any edit.
 - [devlog/13_instagram_repost_audit.md](devlog/13_instagram_repost_audit.md) - 2026-09-25: Instagram repost audited end to end (host normalisation, `/flush` drop policy, shared send-error classifier, testable slot branch), then a live permalink proved the pinned yt-dlp 2026.03.17 could not download at all - pin raised to 2026.07.04.
 - [devlog/14_youtube_copy_preserve.md](devlog/14_youtube_copy_preserve.md) - 2026-10-05: PR #3 audited and merged - sanitizer reworked from repost-with-header to an entity-preserving server-side copy; caption splitting, preflight table and offset tests added on top.
 - [devlog/15_gitops_deploy.md](devlog/15_gitops_deploy.md) - 2026-10-17: deploy payload moved from the homelab flux repo to this repo's `gitops` branch; CI bumps `newTag`, Flux reconciles, secrets via ExternalSecret -> Bitwarden.
+- [devlog/16_pipeline_hardening.md](devlog/16_pipeline_hardening.md) - 2026-10-17: publish.yml hardened into test->image->smoke->sign->bump with digest pinning; actions SHA-pinned in both workflows.
 
 ## Removed surfaces (code deleted; docs deleted with them)
 

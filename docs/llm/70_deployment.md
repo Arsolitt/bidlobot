@@ -48,18 +48,27 @@ repository, which holds only `deploy/`:
   Retain`.
 - `kustomization.yaml` - the Deployment image is the placeholder
   `ghcr.io/arsolitt/bidlobot:master`; the `images:` transformer
-  rewrites it, and `newTag` is the only line CI touches.
+  rewrites it, and CI rewrites its `newTag` + `digest` lines - the
+  digest pins what runs.
 
-Deploy path: push to `master` -> `publish.yml` builds and pushes the
-image (linux/amd64, GHCR) -> the `update-manifest` job rewrites
-`newTag` on the `gitops` branch (GITHUB_TOKEN pushes never trigger
-workflows, so no CI loop) -> Flux reconciles (GitRepository `bidlobot`,
+Deploy path: push to `master` -> `publish.yml` runs a linear chain:
+`test` (vet + `go test`) gates `image` (linux/amd64, GHCR; emits the
+pushed `TAG` + `DIGEST`), then `smoke` (pull by digest and boot the
+image with a fake token: `--check-config` exit 0, then the documented
+fail-fast Telegram auth gate - GetMe precedes the health listener, so
+`/livez` cannot serve under a fake token; kubelet proves liveness
+in-cluster) and `sign` (cosign keyless OIDC over the digest) both gate
+`update-manifest`, which rewrites `newTag` + `digest` on the `gitops`
+branch (GITHUB_TOKEN pushes never trigger workflows, so no CI loop)
+-> Flux reconciles the digest-pinned image (GitRepository `bidlobot`,
 `ref: {branch: gitops}`, interval 5m - public repo, no PAT, GitHub
 unauthenticated budget 60 req/h per IP; owner Kustomization `path:
 deploy`, interval 1m, `prune: false`, `wait: true` - both live in the
 homelab gitops repo, `clusters/homelab/{sources,apps}/bidlobot.yaml`)
--> Recreate rolls the single poller. Bootstrap (bbolt seed restore)
-and backup (scale-to-0 helper-pod recipe) runbooks live in
+-> Recreate rolls the single poller. Because the manifest pins the
+digest, overwriting a tag in GHCR cannot reach the cluster, and a red
+test can no longer ship an image. Bootstrap (bbolt seed restore) and
+backup (scale-to-0 helper-pod recipe) runbooks live in
 `deploy/README.md` on the `gitops` branch.
 
 ## Prerequisites

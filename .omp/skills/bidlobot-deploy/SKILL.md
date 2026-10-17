@@ -13,11 +13,13 @@ branch of this repository. The VM100 docker-compose deploy and its scripts
 ## HARD GATE
 
 1. `go test ./...` must be GREEN; `gofmt -l` on changed files must be EMPTY.
-2. **Pushing to `master` IS a production deploy**: CI builds the image,
-   bumps `newTag` on the `gitops` branch, and Flux rolls the pod within
-   ~6 min (build time + 5m source interval + 1m reconcile). Ask the user
-   for explicit OK before pushing - the Recreate rollout drops in-flight
-   messages for ~2 s while the long-poll reconnects.
+2. **Pushing to `master` IS a production deploy**: CI runs the
+   publish chain (test -> image -> smoke + sign -> update-manifest),
+   bumps `newTag` + `digest` on the `gitops` branch, and Flux rolls
+   the pod within ~6 min (build time + 5m source interval + 1m
+   reconcile). Ask the user for explicit OK before pushing - the
+   Recreate rollout drops in-flight messages for ~2 s while the
+   long-poll reconnects.
 3. Never commit code you did not write: `git status --porcelain` before
    `git add`, stage only your files.
 
@@ -25,8 +27,11 @@ branch of this repository. The VM100 docker-compose deploy and its scripts
 
 ```
 push to master
+  -> publish.yml test job: go vet + go test gate the build
   -> publish.yml image job: ghcr.io/arsolitt/bidlobot:<upstream7>-f<fork7> (linux/amd64)
-  -> publish.yml update-manifest job: sed newTag in deploy/kustomization.yaml on gitops
+  -> publish.yml smoke job: boot the pushed digest (--check-config + fail-fast auth gate)
+  -> publish.yml sign job: cosign keyless OIDC over the digest
+  -> publish.yml update-manifest job: sed newTag + digest in deploy/kustomization.yaml on gitops
   -> Flux GitRepository `bidlobot` (branch gitops, interval 5m, ns flux-system)
   -> Kustomization `bidlobot` (path deploy, interval 1m, prune false, ns kustomize)
   -> Recreate rollout of the single getUpdates poller
@@ -36,15 +41,19 @@ Wiring (GitRepository + owner Kustomization) lives in the homelab gitops
 repo, `clusters/homelab/{sources,apps}/bidlobot.yaml`. Manifests and the
 bootstrap/backup runbooks live in `deploy/` on the `gitops` branch.
 
-## Manual tag pin (rollback or hotpin)
+## Manual pin (rollback or hotpin)
 
-On the `gitops` branch, set `newTag` in `deploy/kustomization.yaml` to the
-target tag and push. Nodes cache images (`IfNotPresent`), so pinning back
-to a previously pulled tag is instant. Tags are immutable
-(`master-<upstream7>-f<fork7>`, see `README.md`), never overwrite one.
+On the `gitops` branch, set BOTH `newTag` and `digest` in
+`deploy/kustomization.yaml` to the target revision and push - with
+`digest:` present the digest wins, so a `newTag`-only edit changes
+nothing that runs. Nodes cache images (`IfNotPresent`), so pinning
+back to a previously pulled digest is instant. Tags are immutable
+(`master-<upstream7>-f<fork7>`, see `README.md`), never overwrite one;
+find an older digest with `docker buildx imagetools inspect
+ghcr.io/arsolitt/bidlobot:<tag>`.
 
-Code rollback: `git revert` on `master` and push - CI rebuilds and bumps
-`newTag` itself.
+Code rollback: `git revert` on `master` and push - CI rebuilds, and
+the chain rewrites `newTag` + `digest` itself.
 
 ## Status
 
@@ -87,4 +96,4 @@ kubectl --context arsolitt@homelab -n bidlobot rollout status deploy/bidlobot \
 | Pod `Pending` | PVC/node (single `local-retain` volume) | check events; volume is node-pinned |
 | Summarize fails `No API key found for deepseek` | `DEEPSEEK_API_KEY` missing from the Secret | Bitwarden value + rotation recipe above |
 | getUpdates 409 conflict | two pollers on one token | never scale past `replicas: 1`; stop any local run using the prod token |
-| Rollout stuck on new tag | image build failed, `newTag` points at nothing | check the publish workflow run; pin `newTag` back |
+| Rollout stuck on new tag | image build failed, or smoke/sign failed before `update-manifest` | check the publish workflow run; pin `newTag` + `digest` back |
