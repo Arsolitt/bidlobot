@@ -6,6 +6,7 @@ resources:
   - pvc.yaml
   - externalsecret.yaml
 images:
-  # newTag is the single line CI rewrites (publish.yml update-manifest job).
+  # CI (publish.yml update-manifest) rewrites newTag+digest; the digest pins what runs.
   - name: ghcr.io/arsolitt/bidlobot
     newTag: master-ed97cc3-f9e471d3
+    digest: sha256:80694b276a54116906b6bbfe7a4f0a7ca568b26593f4a4cbf625e1978de5cea9
