@@ -21,13 +21,17 @@ env:
 jobs:
   image:
     runs-on: ubuntu-latest
+    outputs:
+      TAG: ${{ steps.tag.outputs.TAG }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Compute image tag
+        id: tag
         run: |
           tag="master-${UPSTREAM_SHA:0:7}-f${GITHUB_SHA:0:7}"
           echo "TAG=$tag" >> "$GITHUB_ENV"
+          echo "TAG=$tag" >> "$GITHUB_OUTPUT"
           echo "Publishing $IMAGE:$tag"
 
       - uses: docker/setup-buildx-action@v3
@@ -45,3 +49,31 @@ jobs:
             VERSION=${{ env.TAG }}
             COMMIT=${{ github.sha }}
           tags: ${{ env.IMAGE }}:${{ env.TAG }}
+
+  # Deploys are tag bumps: rewrite newTag on the gitops branch and let
+  # Flux roll the cluster. GITHUB_TOKEN pushes never trigger workflows,
+  # so this cannot loop back into publish.
+  update-manifest:
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gitops
+
+      - name: Bump newTag in deploy/kustomization.yaml
+        env:
+          TAG: ${{ needs.image.outputs.TAG }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          sed -i "s|newTag: .*|newTag: $TAG|" deploy/kustomization.yaml
+          if git diff --quiet -- deploy/kustomization.yaml; then
+            echo "newTag already $TAG; nothing to push"
+            exit 0
+          fi
+          git add deploy/kustomization.yaml
+          git commit -m "chore(deploy): bump image tag to $TAG"
+          git push
