@@ -38,8 +38,8 @@ The full reference lives in `docs/llm/`:
 - `45_summarize.md` - the OMP/Pi summarization provider + budget model.
 - `60_architecture.md` - layered composition, middleware order, bbolt
   schema, invariants, failure matrix.
-- `70_deployment.md` - docker-compose stack (single bot service), env
-  vars, healthcheck, backup, rollback.
+- `70_deployment.md` - k8s/gitops production deploy, docker-compose
+  local stack, env vars, healthcheck, backup, rollback.
 - `handoff.md` - current state + manual smoke checklist.
 
 ## Quick start (local dev)
@@ -142,6 +142,16 @@ build as `VERSION` (full tag) and `COMMIT` (fork sha) ldflags, so
 in `publish.yml` in the same commit so the next tag advertises the new
 base. The workflow does not check out `UPSTREAM_SHA`; it is purely the
 provenance anchor.
+
+Production deploys from the orphan `gitops` branch of this repo, which
+holds only `deploy/` (Deployment, PVC, ExternalSecret, kustomization).
+After `publish.yml` builds and pushes the image, its `update-manifest`
+job rewrites `newTag` in `deploy/kustomization.yaml` on that branch;
+Flux reconciles the commit (GitRepository `bidlobot` + owner
+Kustomization in the homelab gitops repo) and rolls the pod. Secrets
+are references only: an ExternalSecret maps Bitwarden Secrets Manager
+entries to the `bidlobot-secrets` Secret via the `bitwarden`
+ClusterSecretStore - no values in this repo.
 
 ## License
 

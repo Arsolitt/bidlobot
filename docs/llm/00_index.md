@@ -2,7 +2,7 @@
 id: llm-index
 kind: index
 written: 2026-05-14
-updated: 2026-10-05
+updated: 2026-10-17
 ---
 
 # docs/llm - LLM-facing reference (v3)
@@ -33,7 +33,7 @@ devlog (immutable history). Run `./validate.sh` after any edit.
 - [60_architecture.md](60_architecture.md) - layered composition, middleware order, bbolt schema, invariants, failure matrix, deferred queue
 - [61_instagram_repost.md](61_instagram_repost.md) - Instagram reel/post repost: yt-dlp only (no mirror), no audio gate, photo/carousel decline, shared repost pipeline, `INSTAGRAM_PROXY` / `INSTAGRAM_COOKIES`
 - [65_admission.md](65_admission.md) - owner-only installation gate (BOT_OWNER_ID, LeaveChat) + opt-in new-member captcha with welcome animation
-- [70_deployment.md](70_deployment.md) - docker-compose stack (single bot service), env vars, image contents (yt-dlp/ffmpeg/omp), healthcheck, backup, rollback
+- [70_deployment.md](70_deployment.md) - k8s/gitops production deploy (gitops branch + Flux + ExternalSecret), docker-compose local flow, env vars, image contents (yt-dlp/ffmpeg/omp), healthcheck, backup, rollback
 
 ## Devlog
 
@@ -51,6 +51,7 @@ devlog (immutable history). Run `./validate.sh` after any edit.
 - [devlog/12_instagram_repost.md](devlog/12_instagram_repost.md) - 2026-09-25: Instagram reel/post repost built on a shared repost pipeline (`repost_common.go`); yt-dlp only (no usable mirror), no audio gate, `INSTAGRAM_PROXY` / `INSTAGRAM_COOKIES`.
 - [devlog/13_instagram_repost_audit.md](devlog/13_instagram_repost_audit.md) - 2026-09-25: Instagram repost audited end to end (host normalisation, `/flush` drop policy, shared send-error classifier, testable slot branch), then a live permalink proved the pinned yt-dlp 2026.03.17 could not download at all - pin raised to 2026.07.04.
 - [devlog/14_youtube_copy_preserve.md](devlog/14_youtube_copy_preserve.md) - 2026-10-05: PR #3 audited and merged - sanitizer reworked from repost-with-header to an entity-preserving server-side copy; caption splitting, preflight table and offset tests added on top.
+- [devlog/15_gitops_deploy.md](devlog/15_gitops_deploy.md) - 2026-10-17: deploy payload moved from the homelab flux repo to this repo's `gitops` branch; CI bumps `newTag`, Flux reconciles, secrets via ExternalSecret -> Bitwarden.
 
 ## Removed surfaces (code deleted; docs deleted with them)
 
