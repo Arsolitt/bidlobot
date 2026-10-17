@@ -8,4 +8,4 @@ resources:
 images:
   # newTag is the single line CI rewrites (publish.yml update-manifest job).
   - name: ghcr.io/arsolitt/bidlobot
-    newTag: master-ed97cc3-f0963759
+    newTag: master-ed97cc3-f1a9670b
