@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: bidlobot
+resources:
+  - deployment.yaml
+  - pvc.yaml
+  - externalsecret.yaml
+images:
+  # newTag is the single line CI rewrites (publish.yml update-manifest job).
+  - name: ghcr.io/arsolitt/bidlobot
+    newTag: master-ed97cc3-f0963759
